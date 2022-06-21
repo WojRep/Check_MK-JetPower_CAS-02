@@ -12,6 +12,8 @@ def discover_jetpower(section):
 def check_jetpower(item, section):
     pprint(item)
     pprint(section)
+    yield Result(state=State.OK, summary="", notice="", details="")
+    return
 
 register.check_plugin(
     name = "jetpower",
