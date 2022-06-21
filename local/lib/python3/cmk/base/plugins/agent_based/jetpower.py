@@ -2,8 +2,10 @@
 # -*- encoding: utf-8; py-indent-offset: 4 -*-
 #
 from .agent_based_api.v1 import *
-import pprint
 
+
+from cmk.utils import debug
+from pprint import pprint
 
 def discover_jetpower(section):
     pprint(section)
@@ -19,8 +21,6 @@ def check_jetpower(item, params, section):
 
 register.snmp_section(
     name="jetpower",
-#    detect = matches(".1.3.6.1.2.1.1.2.0", ".*(54321|38747).*"),
-     detect = contains(".1.3.6.1.2.1.1.2", "54321"),
     fetch = SNMPTree(
         base = '.1.3.6.1.4.1.38747.1',
         oids = [
@@ -85,12 +85,16 @@ register.snmp_section(
 
                 ],
     ),
+#    detect = matches(".1.3.6.1.2.1.1.2.0", ".*(54321|38747).*"),
+#    detect = contains(".1.3.6.1.2.1.1.2", "54321"),
+    detect = startswith(".1.3.6.1.2.1.1.2.0", ".1.3.6.1.4.1.54321"),
 
 )
 
 
 register.check_plugin(
     name = "jetpower",
+    sections=["jetpower"],
     service_name = "%s",
     discovery_function = discover_jetpower,
     check_default_parameters={},
