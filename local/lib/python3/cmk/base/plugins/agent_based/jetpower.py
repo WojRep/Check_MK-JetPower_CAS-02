@@ -20,7 +20,7 @@ def check_jetpower(item, section):
 register.snmp_section(
     name="jetpower",
 #    detect = matches(".1.3.6.1.2.1.1.2.0", ".*(54321|38747).*"),
-     detect = contains(".1.3.6.1.2.1.1.2.0", "54321"),
+     detect = contains(".1.3.6.1.2.1.1.2", "54321"),
     fetch = SNMPTree(
         base = '.1.3.6.1.4.1.38747.1',
         oids = [
