@@ -14,7 +14,8 @@ def discover_jetpower(section):
 def check_jetpower(item, params, section):
     pprint(item)
     pprint(section)
-    yield Result(state=State.OK, summary="", notice="", details="", params)
+#    yield Result(state=State.OK, summary="", notice="", details="", params)
+    yield Result(state=State.OK, summary="")
     return
 
 
