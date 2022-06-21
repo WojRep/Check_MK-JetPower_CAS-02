@@ -7,11 +7,22 @@ from .agent_based_api.v1 import *
 from cmk.utils import debug
 from pprint import pprint
 
+def parse_jetpower(string_table):
+
+    pprint(string_table)
+    section = {}
+    return section
+
+
 def discover_jetpower(section):
     pprint(section)
     yield Service(item="zzz")
 
+
 def check_jetpower(item, params, section):
+    if not section:
+        yield Result(state=State.UNKNOWN, summary="No data")
+        return
     pprint(item)
     pprint(section)
 #    yield Result(state=State.OK, summary="", notice="", details="", params)
@@ -89,7 +100,7 @@ register.snmp_section(
 #    detect = matches(".1.3.6.1.2.1.1.2.0", ".*(54321|38747).*"),
 #    detect = contains(".1.3.6.1.2.1.1.2", "54321"),
     detect = startswith(".1.3.6.1.2.1.1.2.0", ".1.3.6.1.4.1.54321"),
-
+    parse_function = parse_jetpower,
 )
 
 
