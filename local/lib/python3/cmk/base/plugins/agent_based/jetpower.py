@@ -12,7 +12,7 @@ def discover_jetpower(section):
 def check_jetpower(item, section):
     pprint(item)
     pprint(section)
-    yield Result(state=State.OK, summary="", notice="", details="")
+    yield Result(state=State.OK, summary="", notice="", details="", params={})
     return
 
 
@@ -83,8 +83,8 @@ register.snmp_section(
             # "67.0", # the percent of the battery capacity which the battery charge mode turn from the float charge into the EQ charge mode.get in(%)
             # "68.0", # the battery control mode,auto EC enable flag: 0 - disable auto EC, 1 - enable auto EC
 
-                ]
-    )
+                ],
+    ),
 
 )
 
