@@ -9,10 +9,10 @@ def discover_jetpower(section):
     pprint(section)
     yield Service(item="zzz")
 
-def check_jetpower(item, section):
+def check_jetpower(item, params, section):
     pprint(item)
     pprint(section)
-    yield Result(state=State.OK, summary="", notice="", details="", params={})
+    yield Result(state=State.OK, summary="", notice="", details="", params)
     return
 
 
