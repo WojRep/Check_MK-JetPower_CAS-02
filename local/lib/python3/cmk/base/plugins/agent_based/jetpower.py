@@ -15,12 +15,7 @@ def check_jetpower(item, section):
     yield Result(state=State.OK, summary="", notice="", details="")
     return
 
-register.check_plugin(
-    name = "jetpower",
-    service_name = "%s",
-    discovery_function = discover_jetpower,
-    check_function = check_jetpower,
-)
+
 
 register.snmp_section(
     name="jetpower",
@@ -90,4 +85,14 @@ register.snmp_section(
                 ]
     )
 
+)
+
+
+register.check_plugin(
+    name = "jetpower",
+    service_name = "%s",
+    discovery_function = discover_jetpower,
+    check_default_parameters={},
+    check_ruleset_name="jetpower",
+    check_function = check_jetpower,
 )
