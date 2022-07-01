@@ -5,10 +5,21 @@ from .agent_based_api.v1 import *
 
 from .agent_based_api.v1.type_defs import *
 
+#from ...check_legacy_includes.temperature import check_temperature
+
+from .utils.temperature import (
+    check_temperature,
+)
+
 from typing import Dict, List
 
 from cmk.utils import debug
 from pprint import pprint
+
+JETPOWER_TEMP_CHECK_DEFAULT_PARAMETERS = {
+    "levels": (50, 75),
+    "lower_levels": (5,0),
+}
 
 system_status_name = {
 	"1": "normal",
@@ -147,7 +158,6 @@ def check_jetpower(item, params, section):
         return
     #
     #
-    if item == "JetPower Temp":
 #    yield Result(state=State.OK, summary="", notice="", details="", params)
     yield Result(state=State.UNKNOW, summary=" wrrr - no data")
     return
@@ -155,26 +165,45 @@ def check_jetpower(item, params, section):
 
 def discover_jetpower_temp(section):
 #    pprint("XXX Discovery ###")
-#    pprint(section[0])
+#    pprint(section)
     if (not section[0]) or (section[0] == None) or (section[0] == ""):
         return
-    yield Service(item="JetPower Temp")
+    yield Service(item="1")
 
 
 def check_jetpower_temp(item, params, section):
-#    pprint("### Check ###")
+#    pprint("# Check #")
 #    pprint(item)
 #    pprint(params)
 #    pprint(section)
-#    pprint("###################################")
+
     if not section:
         yield Result(state=State.UNKNOWN, summary="No data")
         return
+    temperature = float("{:.1f}".format(int(section[0][0])/1000))
+#    yield Metric(
+#        name="Temperature",
+#	value=temperature,
+#        levels=( 50, 65),
+#        boundaries=(-10, 100)
+#    )
     state = State.OK
-    summary = "..."
-    yield Result(state=state, summary = summary)
-    return
+#    summary = str(temperature) + chr(176) +"C"
+    yield Result(state=state, notice = " ")
+#    yield Result(state=state, summary = sumary)
+#    return
+#    levels = None, None
+#    lower_levels = None, None
+    unit = "c"	# lower case
 
+    low_warn = 0
+    low_crit = -5
+    high_warn = 50
+    high_crit = 75
+    
+#    yield check_temperature(temperature, params, "jetpower_temp_%s" % item, unit, dev_levels=(high_warn, high_crit), dev_levels_lower=(low_warn, low_crit)) 
+    yield from check_temperature(temperature, params, unique_name="jetpower_temp_%s" % item, dev_unit=unit, dev_levels=(high_warn, high_crit), dev_levels_lower=(low_warn, low_crit)) 
+#    return check_temperature(temperature, params, item, unit, dev_levels=(high_warn, high_crit), dev_levels_lower=(low_warn, low_crit)) 
 
 register.snmp_section(
     name=NAME,
@@ -188,7 +217,7 @@ register.snmp_section(
 
 register.snmp_section(
     name=NAME + "_temp",
-    fetch = SNMPTRee(
+    fetch = SNMPTree(
 	base = ".1.3.6.1.2.1.2.2.1.15",
 	oids = [ "1",],
     ),
@@ -208,8 +237,10 @@ register.check_plugin(
 register.check_plugin(
     name = NAME + "_temp",
     sections=[NAME+"_temp"],
-    service_name = "%s",
+    service_name = "JetPower Temp %s",
     discovery_function = discover_jetpower_temp,
     check_default_parameters={},
     check_ruleset_name='temperature',
     check_function = check_jetpower_temp,
+)
+
