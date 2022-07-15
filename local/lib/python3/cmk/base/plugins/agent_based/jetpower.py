@@ -36,13 +36,14 @@ NAME="jetpower"
 SNMP_BASE = ".1.3.6.1.4.1.38747.1"
 SNMP_DETECT = startswith(".1.3.6.1.2.1.1.2.0", ".1.3.6.1.4.1.38747")
 OIDs = [
-            ["2.0", "model_name", "Model name"],  				# 0
-            ["3.0", "firmware_version", "Firmware version"],			# 1
-            ["4.0", "site_name", "Site name"],  				# 2
-            ["5.0", "system_status", "System status"],  			# 3 : 1-normal, 2-minor alarm, 3-major alarm
-            ["6.0", "system_voltage", "Voltage"],  				# 4
-            ["7.0", "system_current_load", "Current load"],			# 5
-            ["8.0", "system_ac", "AC voltage"],  # 6 - AC voltage
+#	    [oid, parameter, parameter_name, do_metric],
+            ["2.0", "model_name", "Model name", False, ],  				# 0
+            ["3.0", "firmware_version", "Firmware version", False, ],			# 1
+            ["4.0", "site_name", "Site name", False, ],  				# 2
+            ["5.0", "system_status", "System status", True, ],  			# 3 : 1-normal, 2-minor alarm, 3-major alarm
+            ["6.0", "system_voltage", "Voltage", True, ],  				# 4
+            ["7.0", "system_current_load", "Current load", True, ],			# 5
+            ["8.0", "system_ac", "AC voltage", True, ],  # 6 - AC voltage
 #            ["9.0",],  # Battery number
 #            ["11.0",], # Battery current: <0 - discharge, >0 - charge battery
 #            ["12.0",], # Battery capacity in %
@@ -163,6 +164,52 @@ def check_jetpower(item, params, section):
     return
 
 
+
+
+register.snmp_section(
+    name=NAME,
+    fetch = SNMPTree(
+        base = SNMP_BASE,
+        oids = [ oid[0] for oid in OIDs],
+    ),
+    detect = SNMP_DETECT,
+    parse_function = parse_jetpower,
+)
+
+
+register.check_plugin(
+    name = NAME,
+    sections=[NAME],
+    service_name = "%s",
+    discovery_function = discover_jetpower,
+    check_default_parameters={},
+    check_ruleset_name=NAME,
+    check_function = check_jetpower,
+)
+
+#####################################################
+#####################################################
+##                                                 ##
+##      ___      _  ______                         ##
+##     |_  |    | | | ___ \                        ##
+##       | | ___| |_| |_/ /____      _____ _ __    ##
+##       | |/ _ \ __|  __/ _ \ \ /\ / / _ \ '__|   ##
+##   /\__/ /  __/ |_| | | (_) \ V  V /  __/ |      ##
+##   \____/ \___|\__\_|  \___/ \_/\_/ \___|_|      ##
+##                                                 ##
+##                                                 ##
+##            _____                                ##
+##           |_   _|                               ##
+##             | | ___ _ __ ___  _ __              ##
+##             | |/ _ \ '_ ` _ \| '_ \             ##
+##             | |  __/ | | | | | |_) |            ##
+##             \_/\___|_| |_| |_| .__/             ##
+##                              | |                ##
+##                              |_|                ##
+##                                                 ##
+#####################################################
+#####################################################
+
 def discover_jetpower_temp(section):
 #    pprint("XXX Discovery ###")
 #    pprint(section)
@@ -205,15 +252,6 @@ def check_jetpower_temp(item, params, section):
     yield from check_temperature(temperature, params, unique_name="jetpower_temp_%s" % item, dev_unit=unit, dev_levels=(high_warn, high_crit), dev_levels_lower=(low_warn, low_crit)) 
 #    return check_temperature(temperature, params, item, unit, dev_levels=(high_warn, high_crit), dev_levels_lower=(low_warn, low_crit)) 
 
-register.snmp_section(
-    name=NAME,
-    fetch = SNMPTree(
-        base = SNMP_BASE,
-        oids = [ oid[0] for oid in OIDs],
-    ),
-    detect = SNMP_DETECT,
-    parse_function = parse_jetpower,
-)
 
 register.snmp_section(
     name=NAME + "_temp",
@@ -224,20 +262,11 @@ register.snmp_section(
     detect = SNMP_DETECT,
 )
 
-register.check_plugin(
-    name = NAME,
-    sections=[NAME],
-    service_name = "%s",
-    discovery_function = discover_jetpower,
-    check_default_parameters={},
-    check_ruleset_name=NAME,
-    check_function = check_jetpower,
-)
 
 register.check_plugin(
     name = NAME + "_temp",
     sections=[NAME+"_temp"],
-    service_name = "JetPower Temp %s",
+    service_name = "JetPower Rectifier %s Temp",
     discovery_function = discover_jetpower_temp,
     check_default_parameters={},
     check_ruleset_name='temperature',
