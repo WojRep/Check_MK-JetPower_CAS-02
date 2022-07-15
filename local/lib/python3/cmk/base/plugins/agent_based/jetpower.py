@@ -5,10 +5,8 @@ from .agent_based_api.v1 import *
 
 from .agent_based_api.v1.type_defs import *
 
-#from ...check_legacy_includes.temperature import check_temperature
-
-from .utils.temperature import (
-    check_temperature,
+from .utils import (
+    temperature,
 )
 
 from typing import Dict, List
@@ -16,10 +14,34 @@ from typing import Dict, List
 from cmk.utils import debug
 from pprint import pprint
 
-JETPOWER_TEMP_CHECK_DEFAULT_PARAMETERS = {
-    "levels": (50, 75),
-    "lower_levels": (5,0),
-}
+#####################################################
+#####################################################
+##                                                 ##
+##      ___      _  ______                         ##
+##     |_  |    | | | ___ \                        ##
+##       | | ___| |_| |_/ /____      _____ _ __    ##
+##       | |/ _ \ __|  __/ _ \ \ /\ / / _ \ '__|   ##
+##   /\__/ /  __/ |_| | | (_) \ V  V /  __/ |      ##
+##   \____/ \___|\__\_|  \___/ \_/\_/ \___|_|      ##
+##                                                 ##
+##                                                 ##
+##         _____ _        _                        ##
+##        / ____| |      | |                       ##
+##       | (___ | |_ __ _| |_ _   _ ___            ##
+##        \___ \| __/ _` | __| | | / __|           ##
+##        ____) | || (_| | |_| |_| \__ \           ##
+##       |_____/ \__\__,_|\__|\__,_|___/           ##
+##                                                 ##
+##                                                 ##
+#####################################################
+#####################################################
+
+
+
+#JETPOWER_TEMP_CHECK_DEFAULT_PARAMETERS = {
+#    "levels": (50, 75),
+#    "lower_levels": (5,0),
+#}
 
 system_status_name = {
 	"1": "normal",
@@ -97,70 +119,91 @@ OIDs = [
             # ["68.0",], # the battery control mode,auto EC enable flag: 0 - disable auto EC, 1 - enable auto EC
 ]
 
+def _isFloat(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+
+def _isInt(s):
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False
 
 def parse_jetpower(string_table):
-#    pprint("### Parse ###")
-#    pprint(string_table)
-    section = string_table
-    return section
+    param_list = {}
+    parameters = string_table[0]
+    for n in range(len(parameters)):
+        if _isFloat(parameters[n]):
+            value = float(parameters[n])/1000.0
+        elif _isInt(parameters[n]):
+            value = int(int(parameters[n]/1000))
+        else:
+            value = str(parameters[n])
+            if (value is None) or (value == ''):
+                value = chr(216)
+        param_list.update({str(OIDs[n][1]): {'value': value, 'name': OIDs[n][2], 'do_metric': OIDs[n][3]}})
+    return param_list
 
 
 def discover_jetpower(section):
-#    pprint("XXX Discovery ###")
-#    pprint(section[0])
-    if (not section[0]) or (section[0] == None) or (section[0] == ""):
+    if len(section) == 0:
         return
     yield Service(item="JetPower Info")
     yield Service(item="JetPower Status")
 
 
 def check_jetpower(item, params, section):
-#    pprint("### Check ###")
-#    pprint(item)
-#    pprint(params)
-#    pprint(section)
-#    pprint("###################################")
     if not section:
         yield Result(state=State.UNKNOWN, summary="No data")
         return
 
-    jetpower_values = section[0]
-    for n in range(len(jetpower_values)):
-        if (jetpower_values[n] is None) or (jetpower_values[n] == ''):
-            jetpower_values[n] = chr(216)
-    #
-    #
     if item == "JetPower Info":
-        model_name, firmware_version, site_name = jetpower_values[:3]
-        if (model_name == "CAS-02") and (int(firmware_version) < 66):
-            yield Result(state=State.ERROR, summary="Upgrade firmware !!!")
+        model_name = section['model_name']['value']
+        firmware_version = section['firmware_version']['value']*1000
+        site_name = section['site_name']['value']
+
+        if (model_name == "CAS-02") and (firmware_version < 66):
+            yield Result(state=State.CRIT, summary="Upgrade firmware !!!")
             return
         else:
-            yield Result(state=State.OK, summary="Model: " + model_name + ", Firmware: " + firmware_version + ", Site name: " + site_name)
-            return
+            yield Result(state=State.OK, summary=f"Model: {model_name}, Firmware: {firmware_version}, Site name: {site_name}")
+
+        return
+
     #
     #
     if item == "JetPower Status":
-        system_status, system_voltage, system_current_load, system_ac = jetpower_values[3:7]
-        system_voltage = float("{:.1f}".format(int(system_voltage) / 1000))
-        system_current_load = float("{:.2f}".format(int(system_current_load) / 1000))
-        system_ac = int(int(system_ac) / 1000)
-        summary = "Status: " + system_status_name.get(str(system_status)) + ", AC:" + str(system_ac)
-        summary = summary + "V, Voltage: " + str(system_voltage) + "V, Current load: " + str(system_current_load) + "A."
+        system_status = section['system_status']['value']*1000
+        system_voltage = section['system_voltage']['value']
+        system_current_load = section['system_current_load']['value']
+        system_ac = section['system_ac']['value']
+
+        system_voltage = float("{:.1f}".format(system_voltage))
+        system_current_load = float("{:.2f}".format(system_current_load))
+        system_ac = float("{:.2f}".format(system_ac))
+
+        summary = f"Status: {system_status_name.get(str(system_status))}, AC: {system_ac}"
+        summary = summary + f"V, Voltage: {system_voltage}V, Current load: {system_current_load}A."
         if system_status == "1":
             state=State.OK
         elif system_status == "2":
             state=State.WARRNING
         elif system_status == "3":
-            state=State.ERROR
+            state=State.CRIT
         else:
-            state=State.UNKNOW
+            state=State.UNKNOWN
         yield Result(state=state, summary=summary)
+
+        yield Metric('system_status', system_status)
+        yield Metric('system_voltage', system_voltage)
+        yield Metric('system_current_load', system_current_load)
+        yield Metric('system_ac', system_ac)
         return
-    #
-    #
-#    yield Result(state=State.OK, summary="", notice="", details="", params)
-    yield Result(state=State.UNKNOW, summary=" wrrr - no data")
+    yield Result(state=State.UNKNOWN, summary=" wrrr - no data")
     return
 
 
@@ -211,47 +254,27 @@ register.check_plugin(
 #####################################################
 
 def discover_jetpower_temp(section):
-#    pprint("XXX Discovery ###")
-#    pprint(section)
     if (not section[0]) or (section[0] == None) or (section[0] == ""):
         return
     yield Service(item="1")
 
 
 def check_jetpower_temp(item, params, section):
-#    pprint("# Check #")
-#    pprint(item)
-#    pprint(params)
-#    pprint(section)
-
     if not section:
         yield Result(state=State.UNKNOWN, summary="No data")
         return
-    temperature = float("{:.1f}".format(int(section[0][0])/1000))
-#    yield Metric(
-#        name="Temperature",
-#	value=temperature,
-#        levels=( 50, 65),
-#        boundaries=(-10, 100)
-#    )
-    state = State.OK
-#    summary = str(temperature) + chr(176) +"C"
-    yield Result(state=state, notice = " ")
-#    yield Result(state=state, summary = sumary)
-#    return
-#    levels = None, None
-#    lower_levels = None, None
-    unit = "c"	# lower case
-
-    low_warn = 0
-    low_crit = -5
-    high_warn = 50
-    high_crit = 75
-    
-#    yield check_temperature(temperature, params, "jetpower_temp_%s" % item, unit, dev_levels=(high_warn, high_crit), dev_levels_lower=(low_warn, low_crit)) 
-    yield from check_temperature(temperature, params, unique_name="jetpower_temp_%s" % item, dev_unit=unit, dev_levels=(high_warn, high_crit), dev_levels_lower=(low_warn, low_crit)) 
-#    return check_temperature(temperature, params, item, unit, dev_levels=(high_warn, high_crit), dev_levels_lower=(low_warn, low_crit)) 
-
+    rectifier_temp = float("{:.1f}".format(int(section[0][0])/100))
+    unit = params.get('input_unit') if params.get('input_unit') else "c"
+    high_warn, high_crit = params.get('levels') if params.get('levels') else (50.0, 75.0)
+    low_warn, low_crit = params.get('levels_lower') if params.get('levels_lower') else (0.0, -5.0)
+    yield from temperature.check_temperature(rectifier_temp, 
+				params=params, 
+				unique_name="jetpower_temp_%s" % item, 
+				value_store=get_value_store(),
+				dev_unit=unit, 
+				dev_levels=(high_warn, high_crit), 
+				dev_levels_lower=(low_warn, low_crit),
+				) 
 
 register.snmp_section(
     name=NAME + "_temp",
@@ -261,7 +284,6 @@ register.snmp_section(
     ),
     detect = SNMP_DETECT,
 )
-
 
 register.check_plugin(
     name = NAME + "_temp",
