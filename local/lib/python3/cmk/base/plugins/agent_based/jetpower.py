@@ -59,24 +59,15 @@ SNMP_BASE = ".1.3.6.1.4.1.38747.1"
 SNMP_DETECT = startswith(".1.3.6.1.2.1.1.2.0", ".1.3.6.1.4.1.38747")
 
 OIDs = {
-'0': {'id': 'model_name', 'oid': '2.0', 'name': "Model", 'do_metric': False, },
-'1': {'id': 'firmware_version', 'oid': '3.0', 'name': 'Firmware', 'do_metric': False, },
-'2': {'id': 'site_name', 'oid': '4.0', 'name': 'Site name', 'do_metric':False, },
-'3': {'id': 'system_status', 'oid': '5.0', 'name': 'System status', 'do_metric': True, },
-'4': {'id': 'system_voltage', 'oid': '6.0', 'name': 'Voltage', 'do_metric': True, },
-'5': {'id': 'system_current_load', 'oid': '7.0', 'name': 'Current load', 'do_metric': True, },
-'6': {'id': 'system_ac', 'oid': '8.0', 'name': 'AC voltage', 'do_metric': True, },
+'0': {'id': 'model_name', 'oid': '2.0', 'name': "Model", 'do_metric': False, 'unit': None, },
+'1': {'id': 'firmware_version', 'oid': '3.0', 'name': 'Firmware', 'do_metric': False, 'unit': None, },
+'2': {'id': 'site_name', 'oid': '4.0', 'name': 'Site name', 'do_metric':False, 'unit': None, },
+'3': {'id': 'system_status', 'oid': '5.0', 'name': 'System status', 'do_metric': True, 'unit':'', },
+'4': {'id': 'system_voltage', 'oid': '6.0', 'name': 'Voltage', 'do_metric': True, 'unit': 'v', },
+'5': {'id': 'system_current_load', 'oid': '7.0', 'name': 'Current load', 'do_metric': True, 'unit': 'a', },
+'6': {'id': 'system_ac', 'oid': '8.0', 'name': 'AC voltage', 'do_metric': True, 'unit': 'v', },
 }
 
-old_OIDs = [
-#	    [oid, parameter, parameter_name, do_metric],
-            ["2.0", "model_name", "Model name", False, ],  				# 0
-            ["3.0", "firmware_version", "Firmware version", False, ],			# 1
-            ["4.0", "site_name", "Site name", False, ],  				# 2
-            ["5.0", "system_status", "System status", True, ],  			# 3 : 1-normal, 2-minor alarm, 3-major alarm
-            ["6.0", "system_voltage", "Voltage", True, ],  				# 4
-            ["7.0", "system_current_load", "Current load", True, ],			# 5
-            ["8.0", "system_ac", "AC voltage", True, ],  # 6 - AC voltage
 #            ["9.0",],  # Battery number
 #            ["11.0",], # Battery current: <0 - discharge, >0 - charge battery
 #            ["12.0",], # Battery capacity in %
@@ -128,7 +119,7 @@ old_OIDs = [
             # ["66.0",], # the total time of the stable current in EQ charge mode. get in (A).
             # ["67.0",], # the percent of the battery capacity which the battery charge mode turn from the float charge into the EQ charge mode.get in(%)
             # ["68.0",], # the battery control mode,auto EC enable flag: 0 - disable auto EC, 1 - enable auto EC
-]
+
 
 def _isFloat(s):
     try:
@@ -148,14 +139,15 @@ def parse_jetpower(string_table):
     param_list = {}
     parameters = string_table[0]
     for n in range(len(parameters)):
-        if _isFloat(parameters[n]):
-            value = float(parameters[n])/1000.0
-        elif _isInt(parameters[n]):
-            value = int(int(parameters[n]/1000))
+        if _isInt(parameters[n]):
+            value = int(int(parameters[n])/1000)
+        elif _isFloat(parameters[n]):
+            value = Float(parameters[n])/1000.0
         else:
             value = str(parameters[n])
             if (value is None) or (value == ''):
                 value = chr(216)
+
         param_list.update(
 		{str(OIDs[str(n)]['id']): {
 		    'value': value, 
