@@ -43,7 +43,7 @@ from pprint import pprint
 #    "lower_levels": (5,0),
 #}
 
-system_status_name = {
+SYSTEM_STATUS_NAME = {
 	"1": "normal",
 	"2": "minnor alarm",
         "3": "major alarm",
@@ -57,7 +57,18 @@ alarm_name = {
 NAME="jetpower"
 SNMP_BASE = ".1.3.6.1.4.1.38747.1"
 SNMP_DETECT = startswith(".1.3.6.1.2.1.1.2.0", ".1.3.6.1.4.1.38747")
-OIDs = [
+
+OIDs = {
+'0': {'id': 'model_name', 'oid': '2.0', 'name': "Model", 'do_metric': False, },
+'1': {'id': 'firmware_version', 'oid': '3.0', 'name': 'Firmware', 'do_metric': False, },
+'2': {'id': 'site_name', 'oid': '4.0', 'name': 'Site name', 'do_metric':False, },
+'3': {'id': 'system_status', 'oid': '5.0', 'name': 'System status', 'do_metric': True, },
+'4': {'id': 'system_voltage', 'oid': '6.0', 'name': 'Voltage', 'do_metric': True, },
+'5': {'id': 'system_current_load', 'oid': '7.0', 'name': 'Current load', 'do_metric': True, },
+'6': {'id': 'system_ac', 'oid': '8.0', 'name': 'AC voltage', 'do_metric': True, },
+}
+
+old_OIDs = [
 #	    [oid, parameter, parameter_name, do_metric],
             ["2.0", "model_name", "Model name", False, ],  				# 0
             ["3.0", "firmware_version", "Firmware version", False, ],			# 1
@@ -145,13 +156,18 @@ def parse_jetpower(string_table):
             value = str(parameters[n])
             if (value is None) or (value == ''):
                 value = chr(216)
-        param_list.update({str(OIDs[n][1]): {'value': value, 'name': OIDs[n][2], 'do_metric': OIDs[n][3]}})
+        param_list.update(
+		{str(OIDs[str(n)]['id']): {
+		    'value': value, 
+		    'name': OIDs[str(n)]['name'], 
+		    'do_metric': OIDs[str(n)]['do_metric'],
+		}})
     return param_list
 
 
 def discover_jetpower(section):
-    if len(section) == 0:
-        return
+#    if len(section) == 0:
+#        return
     yield Service(item="JetPower Info")
     yield Service(item="JetPower Status")
 
@@ -186,7 +202,7 @@ def check_jetpower(item, params, section):
         system_current_load = float("{:.2f}".format(system_current_load))
         system_ac = float("{:.2f}".format(system_ac))
 
-        summary = f"Status: {system_status_name.get(str(system_status))}, AC: {system_ac}"
+        summary = f"Status: {SYSTEM_STATUS_NAME.get(str(system_status))}, AC: {system_ac}"
         summary = summary + f"V, Voltage: {system_voltage}V, Current load: {system_current_load}A."
         if system_status == "1":
             state=State.OK
@@ -213,7 +229,7 @@ register.snmp_section(
     name=NAME,
     fetch = SNMPTree(
         base = SNMP_BASE,
-        oids = [ oid[0] for oid in OIDs],
+        oids = [ oid['oid'] for _, oid in OIDs.items()],
     ),
     detect = SNMP_DETECT,
     parse_function = parse_jetpower,
