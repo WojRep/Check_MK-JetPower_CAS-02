@@ -143,7 +143,7 @@ def parse_jetpower(string_table):
             value = int(parameters[n])
 
         elif _isFloat(parameters[n]):
-            value = float(parameters[n]) / divider 
+            value = float(int(parameters[n]) / divider) 
 
         else:
             value = str(parameters[n])
