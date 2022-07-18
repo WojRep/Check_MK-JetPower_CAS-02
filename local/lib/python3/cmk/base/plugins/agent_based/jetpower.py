@@ -85,10 +85,6 @@ OIDs = {
 #            ["24.0",], # Rectifiers Input Over Voltage: 0 - normal, 1 - alarm
 #            ["25.0",], # Rectifiers Input Under Voltage: 0 - normal, 1 - alarm
 #            ["26.0",], # FAN status: 0 - normal, 1 - alarm
-#            ["27.0",], # Ambient Over temperature: 0 - normal, 1 - alarm
-#            ["28.0",], # Ambient Under temperature: 0 - normal, 1 - alarm
-#            ["29.0",], # Rectifiers PFC temperature: 0 - normal, 1 - alarm too hight
-#            ["30.0",], # Rectifiers DHDH temperature: 0 - normal, 1 - alarm too hight
 #            ["31.0",], # Status of communications between rectifiers: 0 - normal, 1 - unsuccessful
 #            ["32.0",], # DCDC eeprom status: 0 - normal, 1 - fault
 #            ["33.0",], # the output power is whtaher derated by the ac voltage or not: 0 - normal, 1 - alarm
@@ -268,45 +264,65 @@ register.check_plugin(
 #####################################################
 #####################################################
 
-#def discover_jetpower_temp(section):
-#    if (not section[0]) or (section[0] == None) or (section[0] == ""):
-#        return
-#    yield Service(item="1")
+ALARM = {
+'0': 'Ambient temp. too HIGH',
+'1': 'Ambient temp. too LOWER',
+'2': 'Rectifiers PFC temp too HIGH',
+'3': 'Rectifiers DC-DC temp too HIGH',
+}
 
 
-#def check_jetpower_temp(item, params, section):
-#    if not section:
-#        yield Result(state=State.UNKNOWN, summary="No data")
-#        return
-#    rectifier_temp = float("{:.1f}".format(int(section[0][0])/100))
-#    unit = params.get('input_unit') if params.get('input_unit') else "c"
-#    high_warn, high_crit = params.get('levels') if params.get('levels') else (50.0, 75.0)
-#    low_warn, low_crit = params.get('levels_lower') if params.get('levels_lower') else (0.0, -5.0)
-#    yield from temperature.check_temperature(rectifier_temp, 
-#				params=params, 
-#				unique_name="jetpower_temp_%s" % item, 
-#				value_store=get_value_store(),
-#				dev_unit=unit, 
-#				dev_levels=(high_warn, high_crit), 
-#				dev_levels_lower=(low_warn, low_crit),
-#				) 
+def discover_jetpower_temp(section):
+    if (not section[0]) or (section[0] == None) or (section[0] == ""):
+        return
+    yield Service(item="JetPower Temp")
 
-#register.snmp_section(
-#    name=NAME + "_temp",
-#    fetch = SNMPTree(
-#	base = ".1.3.6.1.2.1.2.2.1.15",
-#	oids = [ "1",],
-#    ),
-#    detect = SNMP_DETECT,
-#)
 
-#register.check_plugin(
-#    name = NAME + "_temp",
-#    sections=[NAME+"_temp"],
-#    service_name = "JetPower Rectifier %s Temp",
-#    discovery_function = discover_jetpower_temp,
-#    check_default_parameters={},
-#    check_ruleset_name='temperature',
-#    check_function = check_jetpower_temp,
-#)
+def check_jetpower_temp(item, params, section):
+    if not section:
+        yield Result(state=State.UNKNOWN, summary="No data")
+        return
+
+    if item and section[0] :
+        alarms=section[0]
+        state=State.OK
+
+        for n in range(len(alarms)):
+            alarm_value = int(alarms[n])
+            if alarm_value == 1:
+                summary = ALARM.get(str(n))
+                state = State.CRIT
+                yield Result(state=state, summary=summary)
+
+        if state == State.OK:
+            summary = f'Temperature is OK.'
+            yield Result(state=state, summary=summary)    
+        return
+
+    else:
+        yield Result(state = State.UNKNOWN, summary = "No correct data")
+
+register.snmp_section(
+    name=NAME + "_temp",
+    fetch = SNMPTree(
+	base = SNMP_BASE,
+	oids = [
+            "27.0", # Ambient Over temperature: 0 - normal, 1 - alarm
+            "28.0", # Ambient Under temperature: 0 - normal, 1 - alarm
+            "29.0", # Rectifiers PFC temperature: 0 - normal, 1 - alarm too hight
+            "30.0", # Rectifiers DHDH temperature: 0 - normal, 1 - alarm too hight
+	],
+    ),
+    detect = SNMP_DETECT,
+)
+
+register.check_plugin(
+    name = NAME + "_temp",
+    sections=[NAME+"_temp"],
+    service_name = "%s",
+    discovery_function = discover_jetpower_temp,
+    check_default_parameters={},
+    check_ruleset_name='',
+    check_function = check_jetpower_temp,
+)
 
