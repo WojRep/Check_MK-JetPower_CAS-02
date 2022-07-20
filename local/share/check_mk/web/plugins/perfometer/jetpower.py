@@ -5,17 +5,17 @@ from cmk.gui.plugins.views.perfometers import (
     perfometer_linear,
 )
 
-def perfometer_jetpower(row, check_command, perf_data):
+def perfometer_jetpower_cas02(row, check_command, perf_data):
 
     PERF = {
         'system_current_load': {'type': 'linear', 'max': 15, 'color': 'red'},
     }
 
-    debug_file = open("/tmp/perfometer.log", "a")
-    _ = str(perf_data)
-    _ = '#################\n'
-    debug_file.write(str(_))
-    debug_file.close()
+#    debug_file = open("/tmp/perfometer.log", "a")
+#    _ = str(perf_data)
+#    _ = '#################\n'
+#    debug_file.write(str(_))
+#    debug_file.close()
 
 
     for perf in perf_data:
@@ -25,7 +25,7 @@ def perfometer_jetpower(row, check_command, perf_data):
             name, value, xxx, warm, crit, _min, _max = perf
             perf_def = PERF[name]
             if perf_def['type'] == 'linear':
-                perc_value = value * 100 / perf_def['max']
+                perc_value = float(value * 100 / perf_def['max'])
                 return u"%s" % str(value), perfometer_linear(perc_value, perf_def['color'])
 
-perfometers['check_mk-jetpower'] = perfometer_jetpower
+perfometers['check_mk-jetpower_cas02'] = perfometer_jetpower_cas02

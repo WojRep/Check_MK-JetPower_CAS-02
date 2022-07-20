@@ -18,30 +18,16 @@ from pprint import pprint
 #####################################################
 ##                                                 ##
 ##      ___      _  ______                         ##
-##     |_  |    | | | ___ \                        ##
+##     |_  |    | | | ___ \       CAS-02           ##
 ##       | | ___| |_| |_/ /____      _____ _ __    ##
 ##       | |/ _ \ __|  __/ _ \ \ /\ / / _ \ '__|   ##
 ##   /\__/ /  __/ |_| | | (_) \ V  V /  __/ |      ##
 ##   \____/ \___|\__\_|  \___/ \_/\_/ \___|_|      ##
 ##                                                 ##
-##                                                 ##
-##         _____ _        _                        ##
-##        / ____| |      | |                       ##
-##       | (___ | |_ __ _| |_ _   _ ___            ##
-##        \___ \| __/ _` | __| | | / __|           ##
-##        ____) | || (_| | |_| |_| \__ \           ##
-##       |_____/ \__\__,_|\__|\__,_|___/           ##
-##                                                 ##
+##   Status                                        ##
 ##                                                 ##
 #####################################################
 #####################################################
-
-
-
-#JETPOWER_TEMP_CHECK_DEFAULT_PARAMETERS = {
-#    "levels": (50, 75),
-#    "lower_levels": (5,0),
-#}
 
 SYSTEM_STATUS_NAME = {
 	"1": "normal",
@@ -56,7 +42,7 @@ alarm_name = {
 
 NAME="jetpower"
 SNMP_BASE = ".1.3.6.1.4.1.38747.1"
-SNMP_DETECT = startswith(".1.3.6.1.2.1.1.2.0", ".1.3.6.1.4.1.38747")
+SNMP_DETECT = startswith('.1.3.6.1.2.1.1.2.0', '.1.3.6.1.4.1.38747') and startswith('.1.3.6.1.2.1.1.5.0', 'CAS-02')
 
 OIDs = {
 '0': {'id': 'model_name', 'oid': '2.0', 'name': "Model", 'do_metric': False, 'unit': None, },
@@ -68,10 +54,6 @@ OIDs = {
 '6': {'id': 'system_ac', 'oid': '8.0', 'name': 'AC voltage', 'do_metric': True, 'unit': 'v',  'divider': 1000,  },
 }
 
-#            ["9.0",],  # Battery number
-#            ["11.0",], # Battery current: <0 - discharge, >0 - charge battery
-#            ["12.0",], # Battery capacity in %
-#            ["13.0",], # Status of battery work: 1 float charge, 2 - equalize charge
 #            ["14.0",], # Rectifiers numbers (sum)
 #            ["15.0",], # Rectifiers communication agent status: 1 - normal, 2 - interupt
 #            ["16.0",], # Rectifiers Output Voltage
@@ -94,27 +76,13 @@ OIDs = {
 #            ["37.0",], # the status of the communication between the recitifiers and the monitor: 0 - normal, 1 - alarm
 #            ["38.0",], # whether the AC voltage is normal or not: 0 - normal, 1 - out of the range
 #            ["39.0",], # whether the output of the rectifier is normal or not: 0 - normal, 1 - alarm
-#            ["40.0",], # whether the current of the battery is higher than the standard current which set up: 0 - normal, 1 - alarm
-#            ["41.0",], # whether the temperature of the battery is normal or not: 0 - normal, 1 - alarm
-#            ["42.0",], # the fuse of the battery loop: 0 - well, 1 - broken
 #            ["43.0",], # the number of the load in the system
 #            ["44.0",], # the fuse of the load loop: 0 - well, 1 - broken
-#            ["45.0",], # BLVD --the battery low voltage disconnected: 0 - connected, 1 - disconnected
 #            ["46.0",], # The digital input status of the DI port,0x01 indicates DI0 and 0x02 indicates DI1, and so on
 #            ["47.0",], # The sum of active alarms
-	    # ["56.0",], # the float voltage of the battery,get in V.
-            # ["57.0",], # the EQ voltage of the battery,get in V
-            # ["58.0",], # the maxinum of the battery current which make alarm , get in (A)
             # ["59.0",], # LLVD the voltage which the power system unload  get in V
-            # ["60.0",], # BLVD--the protected voltage which the power system unload the battery   get in V
-            # ["61.0",], # the limit current of the battery in EQ charge mode
             # ["62.0",], # the period of the next EQ charge time
-            # ["63.0",], # the battery temperature which make alarm. get in Celsius degree
-            # ["64.0",], # the capacity of the battery in the power system. get in Ah
-            # ["65.0",], # the in all time of the battery in EQ charge mode. get in minute.
             # ["66.0",], # the total time of the stable current in EQ charge mode. get in (A).
-            # ["67.0",], # the percent of the battery capacity which the battery charge mode turn from the float charge into the EQ charge mode.get in(%)
-            # ["68.0",], # the battery control mode,auto EC enable flag: 0 - disable auto EC, 1 - enable auto EC
 
 
 def _isFloat(s):
@@ -131,7 +99,7 @@ def _isInt(s):
     except ValueError:
         return False
 
-def parse_jetpower(string_table):
+def parse_jetpower_cas02(string_table):
     param_list = {}
     parameters = string_table[0]
     for n in range(len(parameters)):
@@ -159,14 +127,14 @@ def parse_jetpower(string_table):
     return param_list
 
 
-def discover_jetpower(section):
+def discover_jetpower_cas02(section):
 #    if len(section) == 0:
 #        return
     yield Service(item="JetPower Info")
     yield Service(item="JetPower Status")
 
 
-def check_jetpower(item, params, section):
+def check_jetpower_cas02(item, params, section):
     if not section:
         yield Result(state=State.UNKNOWN, summary="No data")
         return
@@ -227,7 +195,7 @@ register.snmp_section(
         oids = [ oid['oid'] for _, oid in OIDs.items()],
     ),
     detect = SNMP_DETECT,
-    parse_function = parse_jetpower,
+    parse_function = parse_jetpower_cas02,
 )
 
 
@@ -235,31 +203,23 @@ register.check_plugin(
     name = NAME,
     sections=[NAME],
     service_name = "%s",
-    discovery_function = discover_jetpower,
+    discovery_function = discover_jetpower_cas02,
     check_default_parameters={},
     check_ruleset_name=NAME,
-    check_function = check_jetpower,
+    check_function = check_jetpower_cas02,
 )
 
 #####################################################
 #####################################################
 ##                                                 ##
 ##      ___      _  ______                         ##
-##     |_  |    | | | ___ \                        ##
+##     |_  |    | | | ___ \       CAS-02           ##
 ##       | | ___| |_| |_/ /____      _____ _ __    ##
 ##       | |/ _ \ __|  __/ _ \ \ /\ / / _ \ '__|   ##
 ##   /\__/ /  __/ |_| | | (_) \ V  V /  __/ |      ##
 ##   \____/ \___|\__\_|  \___/ \_/\_/ \___|_|      ##
 ##                                                 ##
-##                                                 ##
-##            _____                                ##
-##           |_   _|                               ##
-##             | | ___ _ __ ___  _ __              ##
-##             | |/ _ \ '_ ` _ \| '_ \             ##
-##             | |  __/ | | | | | |_) |            ##
-##             \_/\___|_| |_| |_| .__/             ##
-##                              | |                ##
-##                              |_|                ##
+##   Temperature                                   ##
 ##                                                 ##
 #####################################################
 #####################################################
@@ -272,13 +232,13 @@ ALARM = {
 }
 
 
-def discover_jetpower_temp(section):
+def discover_jetpower_cas02_temp(section):
     if (not section[0]) or (section[0] == None) or (section[0] == ""):
         return
     yield Service(item="JetPower Temp")
 
 
-def check_jetpower_temp(item, params, section):
+def check_jetpower_cas02_temp(item, params, section):
     if not section:
         yield Result(state=State.UNKNOWN, summary="No data")
         return
@@ -320,9 +280,209 @@ register.check_plugin(
     name = NAME + "_temp",
     sections=[NAME+"_temp"],
     service_name = "%s",
-    discovery_function = discover_jetpower_temp,
+    discovery_function = discover_jetpower_cas02_temp,
     check_default_parameters={},
     check_ruleset_name='',
-    check_function = check_jetpower_temp,
+    check_function = check_jetpower_cas02_temp,
 )
 
+
+
+#####################################################
+#####################################################
+##                                                 ##
+##      ___      _  ______                         ##
+##     |_  |    | | | ___ \       CAS-02           ##
+##       | | ___| |_| |_/ /____      _____ _ __    ##
+##       | |/ _ \ __|  __/ _ \ \ /\ / / _ \ '__|   ##
+##   /\__/ /  __/ |_| | | (_) \ V  V /  __/ |      ##
+##   \____/ \___|\__\_|  \___/ \_/\_/ \___|_|      ##
+##                                                 ##
+##   Batteries                                     ##
+##                                                 ##
+#####################################################
+#####################################################
+
+BATT_STATUS = { 
+	'1': { 'name': 'in float charge',	'status': State.OK, }, 
+	'2': { 'name': 'in equal charge',	'status': State.OK, },
+}
+
+BATT_CURRENT_ALARM = { 
+	'0': { 'name': 'normal',	'status': State.OK, },
+	'1': { 'name': 'too HIGH',	'status': State.WARN, },
+}
+
+BATT_TEMP_ALARM = {
+	'0': { 'name': 'normal',	'status': State.OK, },
+	'1': { 'name': 'ABNORMAL',	'state': State.CRIT, },
+}
+
+BATT_BLVD_ALARM = {
+	'0': { 'name': 'normal',	'status': State.OK, },
+	'1': { 'name': 'too LOW',	'state': State.CRIT, },
+}
+
+
+BATT_OIDs = [
+    {'id': 'batt_number', 'name': 'Batt No', 'long_name': 'Battery number', 'oid': "9.0", 'do_metric': False, 'unit': None, 'result': True, },			# Battery number
+    {'id': 'batt_soc', 'name': 'SoC', 'long_name': 'Battery Soc', 'oid': "10.0", 'do_metric': True,'unit': '%' ,'result': True, },
+    {'id': 'batt_current', 'name': 'Load', 'long_name': 'Battery current','oid': "11.0",'do_metric': True,'unit': 'a', 'divider': 1000, 'result': True, },			# Battery current: <0 - discharge, >0 - charge battery
+    {'id': 'batt_temp', 'name': 'Temp', 'long_name': 'Battery temperature','oid': "12.0",'do_metric': True,'unit': 'c', 'divider': 1000, 'result': True, },
+    {'id': 'batt_charge_mode', 'name': 'Charge mode', 'long_name': 'Charge mode of battery','oid': "13.0",'do_metric': True,'unit': None, 'result': True, 'alarm': BATT_STATUS, },		# Status of battery work: 1 float, 2 - equal
+    {'id': 'batt_current_alarm', 'name': 'Load status', 'long_name': 'Current of battery','oid': "40.0",'do_metric': False,'unit': None, 'result': True, 'alarm': BATT_CURRENT_ALARM, },		# whether the current of the battery is higher than the standard current which set up: 0 - normal, 1 - alarm
+    {'id': 'batt_temp_alarm', 'name': 'Temp staus', 'long_name': 'Temperature of battery','oid': "41.0",'do_metric': True,'unit': None, 'result': True, 'alarm': BATT_TEMP_ALARM, },		# whether the temperature of the battery is normal or not: 0 - normal, 1 - alarm
+    {'id': 'batt_CB_alarm', 'name': 'CB status', 'long_name': 'CB alarm','oid': "42.0",'do_metric': False,'unit': None, 'result': True, },
+    {'id': 'batt_blvs_alarm', 'name': 'BLVD', 'long_name': 'BLVD','oid': "45.0",'do_metric': False,'unit': None, 'result': True, 'alarm': BATT_BLVD_ALARM},				# BLVD --the battery low voltage disconnected: 0 - connected, 1 - disconnected
+### Read settings
+    {'id': 'batt_charge_overcurrent', 'long_name': 'Battery charge over current point','oid': "56.0",'do_metric': False,'unit': 'a', 'divider':1000},	# 0.001 * batt_charge_overcurrent * batt_capacity --> 0.001*500*100Ah=50A
+    {'id': 'batt_llvd_voltage', 'long_name': 'LLVD voltage of battery','oid': "57.0",'do_metric': False,'unit': 'v', 'divider':1000},		# the voltage which to cut off unimportant load
+    {'id': 'batt_blvd_voltage', 'long_name': 'BLVDvoltage of battery','oid': "58.0",'do_metric': False,'unit': 'v', 'divider':1000},		# the voltage which to cut off battery to avoid over discharge
+    {'id': 'batt_charge_limit', 'long_name': 'Battery charge curent limit', 'oid': '59.0', 'do_metric': False, 'unit': None, },
+    {'id': 'batt_charge_cycle', 'long_name': 'The equal charge period','oid': "60.0",'do_metric': False,'unit': '', },
+    {'id': 'batt_temp_limit', 'long_name': 'Over Temperature limit','oid': "61.0",'do_metric': False,'unit': 'c', 'divider':1000},
+    {'id': 'batt_capacity', 'long_name': 'Battery capacity', 'oid': '62.0', 'do_metric': False, 'unit': 'Ah', },
+    {'id': 'batt_charge_protect_time', 'long_name': 'Equal charge keeping time','oid': "63.0",'do_metric': False,'unit': '', },
+    {'id': 'batt_eq_charge_time', 'long_name': 'Trickle charge time','oid': "64.0",'do_metric': False,'unit': '', },
+    {'id': 'batt_eq_charge_current_limit', 'long_name': 'Current value when battery charge current','oid': "65.0",'do_metric': False,'unit': 'a', 'divider':1000 },
+    {'id': 'batt_eq_charge_soc', 'long_name': 'Soc value when battery remain soc level', 'oid': '66.0', 'do_metric': False, 'unit': '%', 'divider': 10 },
+    {'id': 'batt_charge_efficient', 'long_name': 'Charge efficient of battery','oid': "67.0",'do_metric': False,'unit': '', },
+    {'id': 'batt_eq', 'long_name': 'auto equals enable','oid': "68.0",'do_metric': False,'unit': None, },
+]
+
+
+BATT_FUSE_ALARM = {
+	'0': { 'name': 'OK', 	'status': State.OK, },
+	'1': { 'name': 'BROKEN', 'status': State.CRIT, },
+}
+
+#def _X(OIDs):
+#    return {OIDs[n]['id']: OIDs[n] for n in OIDs.keys()}
+
+def parse_jetpower_cas02_batt(string_table):
+    
+#    value_list = []
+    parameters = string_table[0]
+
+    for n in range(len(parameters)):
+
+        divider =  BATT_OIDs[n].get('divider') if BATT_OIDs[n].get('divider') else 1
+
+        if _isInt(parameters[n]) and divider == 1:
+            value = int(parameters[n])
+
+        elif _isFloat(parameters[n]):
+            value = float(int(parameters[n]) / divider) 
+
+        else:
+            value = str(parameters[n])
+            if (value is None) or (value == ''):
+                value = chr(216)
+
+        parameters[n] = value
+#        value_list.update(
+#                {str(BATT_OIDs[n]['id']): {
+#                    'value': value, 
+#                }})
+    return parameters
+
+
+def discover_jetpower_cas02_batt(section):
+    yield Service(item="JetPower Batteries")
+
+
+def check_jetpower_cas02_batt(item, params, section):
+
+#    pprint(f'Item: {item}')
+#    pprint(section)
+
+    if not section:
+        yield Result(state=State.UNKNOWN, summary="No data")
+        return
+
+    state = State.OK
+    summary = None
+    notice = None
+    details = ""
+
+    if item == "JetPower Batteries":
+
+        
+
+#        batt_params = params.get(item) if params.get(item) else batt_default_params        
+
+#        yield Result(state=state, summary="ABC")
+
+#        param_def_list = dict(_X(BATT_OIDs))
+
+        for n in range(len(section)):
+            param = BATT_OIDs[n].get('id')
+            value = section[n]
+
+#            pprint(param_def_list)
+
+#            p = param_def_list[key]
+
+#            pprint(type(p))
+#            pprint(p)
+
+            name = BATT_OIDs[n].get('name') if BATT_OIDs[n].get('name') else None
+            long_name = BATT_OIDs[n].get('long_name')
+            do_metric = BATT_OIDs[n].get('do_metric') if BATT_OIDs[n].get('do_metric') else False
+            unit = BATT_OIDs[n].get('unit') if BATT_OIDs[n].get('unit') else ''
+            result = BATT_OIDs[n].get('result') if BATT_OIDs[n].get('result') else False
+
+            if BATT_OIDs[n].get('alarm'):
+                value_name = BATT_OIDs[n].get('alarm').get(str(value)).get('name')
+                status = BATT_OIDs[n].get('alarm').get(str(value)).get('status')
+                details = f"{long_name}: {value_name}"
+                summary = f"{name}: {value_name}"
+            else:
+                details = f"{long_name}: {value}"
+                summary = f"{name}: {value}"
+
+            if do_metric and result and not BATT_OIDs[n].get('alarm'):
+#                pprint(param)
+#                pprint(name)
+#                pprint(value)
+                yield from check_levels(
+                            value=value, 
+                            metric_name = param,
+                            label = name,
+#                            levels_upper = upper_levels, 
+#                            levels_lower = lower_levels, 
+#                            render_func = lambda parameter_data: _render_func(value, unit),
+                        )
+            elif do_metric and result:
+                yield Metric(param, value)
+                yield Result(state=state, details=details, summary=summary)
+            elif result:
+                yield Result(state=state, details=details, summary=summary)
+
+        return
+
+    yield Result(state=State.UNKNOWN, summary="No item or data")
+    return
+
+
+
+
+register.snmp_section(
+    name=NAME + "_batt",
+    fetch = SNMPTree(
+	base = SNMP_BASE,
+        oids = [ oid['oid'] for oid in BATT_OIDs],
+    ),
+    detect = SNMP_DETECT,
+    parse_function = parse_jetpower_cas02_batt,
+
+)
+register.check_plugin(
+    name = NAME + "_batt",
+    sections=[NAME+"_batt"],
+    service_name = "%s",
+    discovery_function = discover_jetpower_cas02_batt,
+    check_default_parameters={},
+    check_ruleset_name='',
+    check_function = check_jetpower_cas02_batt,
+)
