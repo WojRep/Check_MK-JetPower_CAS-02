@@ -29,6 +29,30 @@ from pprint import pprint
 #####################################################
 #####################################################
 
+UNIT = {
+    "c": u"°C",
+    "f": u"°F",
+    "k": u"K",
+    'v': u"V",
+    'a': u"A",
+    'w': u"W",
+    'wh': u"Wh",
+    'hz': u"Hz",
+    'pa': u"Pa",
+    '%': u"%",
+    'ug/m3': u"µg/㎥",
+}
+
+def _render_template(value: float):
+    template = "%%%s" % ("d" if isinstance(value, int) else ".1f")
+    return template % value    
+
+
+def _render_func(value: float, unit: str) -> str:
+    return _render_template(value) + UNIT.get(unit) if UNIT.get(unit) else ''
+
+
+
 SYSTEM_STATUS_NAME = {
 	"1": "normal",
 	"2": "minnor alarm",
@@ -138,35 +162,26 @@ def check_jetpower_cas02(item, params, section):
     if not section:
         yield Result(state=State.UNKNOWN, summary="No data")
         return
-
     if item == "JetPower Info":
         model_name = section['model_name']['value']
         firmware_version = section['firmware_version']['value']
         site_name = section['site_name']['value']
-
         if (model_name == "CAS-02") and (firmware_version < 66):
             yield Result(state=State.CRIT, summary=f"Upgrade firmware !!! - Your firmware: {firmware_version}")
             return
         else:
             yield Result(state=State.OK, summary=f"Model: {model_name}, Firmware: {firmware_version}, Site name: {site_name}")
-
         return
-
-    #
-    #
     if item == "JetPower Status":
         system_status = section['system_status']['value']
         system_voltage = section['system_voltage']['value']
         system_current_load = section['system_current_load']['value']
         system_ac = section['system_ac']['value']
-
         system_voltage = float("{:.1f}".format(system_voltage))
         system_current_load = float("{:.2f}".format(system_current_load))
         system_ac = float("{:.2f}".format(system_ac))
-
         summary = f"Status: {SYSTEM_STATUS_NAME.get(str(system_status))}, AC: {system_ac}"
         summary = summary + f"V, Voltage: {system_voltage}V, Current load: {system_current_load}A."
-
         if system_status == 1:
             state=State.OK
         elif system_status == 2:
@@ -176,7 +191,6 @@ def check_jetpower_cas02(item, params, section):
         else:
             state=State.UNKNOWN
         yield Result(state=state, summary=summary)
-
         yield Metric('system_status', system_status)
         yield Metric('system_voltage', system_voltage)
         yield Metric('system_current_load', system_current_load)
@@ -323,6 +337,10 @@ BATT_BLVD_ALARM = {
 	'1': { 'name': 'too LOW',	'state': State.CRIT, },
 }
 
+BATT_CB_ALARM = {
+	'0': { 'name': 'OK', 	'status': State.OK, },
+	'1': { 'name': 'BROKEN', 'status': State.CRIT, },
+}
 
 BATT_OIDs = [
     {'id': 'batt_number', 'name': 'Batt No', 'long_name': 'Battery number', 'oid': "9.0", 'do_metric': False, 'unit': None, 'result': True, },			# Battery number
@@ -331,9 +349,9 @@ BATT_OIDs = [
     {'id': 'batt_temp', 'name': 'Temp', 'long_name': 'Battery temperature','oid': "12.0",'do_metric': True,'unit': 'c', 'divider': 1000, 'result': True, },
     {'id': 'batt_charge_mode', 'name': 'Charge mode', 'long_name': 'Charge mode of battery','oid': "13.0",'do_metric': True,'unit': None, 'result': True, 'alarm': BATT_STATUS, },		# Status of battery work: 1 float, 2 - equal
     {'id': 'batt_current_alarm', 'name': 'Load status', 'long_name': 'Current of battery','oid': "40.0",'do_metric': False,'unit': None, 'result': True, 'alarm': BATT_CURRENT_ALARM, },		# whether the current of the battery is higher than the standard current which set up: 0 - normal, 1 - alarm
-    {'id': 'batt_temp_alarm', 'name': 'Temp staus', 'long_name': 'Temperature of battery','oid': "41.0",'do_metric': True,'unit': None, 'result': True, 'alarm': BATT_TEMP_ALARM, },		# whether the temperature of the battery is normal or not: 0 - normal, 1 - alarm
-    {'id': 'batt_CB_alarm', 'name': 'CB status', 'long_name': 'CB alarm','oid': "42.0",'do_metric': False,'unit': None, 'result': True, },
-    {'id': 'batt_blvs_alarm', 'name': 'BLVD', 'long_name': 'BLVD','oid': "45.0",'do_metric': False,'unit': None, 'result': True, 'alarm': BATT_BLVD_ALARM},				# BLVD --the battery low voltage disconnected: 0 - connected, 1 - disconnected
+    {'id': 'batt_temp_alarm', 'name': 'Temp status', 'long_name': 'Temperature of battery','oid': "41.0",'do_metric': True,'unit': None, 'result': True, 'alarm': BATT_TEMP_ALARM, },		# whether the temperature of the battery is normal or not: 0 - normal, 1 - alarm
+    {'id': 'batt_CB_alarm', 'name': 'CB status', 'long_name': 'CB alarm','oid': "42.0",'do_metric': False,'unit': None, 'result': True, 'alarm': BATT_CB_ALARM, },
+    {'id': 'batt_blvs_alarm', 'name': 'BLVD', 'long_name': 'BLVD','oid': "45.0",'do_metric': False,'unit': None, 'result': True, 'alarm': BATT_BLVD_ALARM, },				# BLVD --the battery low voltage disconnected: 0 - connected, 1 - disconnected
 ### Read settings
     {'id': 'batt_charge_overcurrent', 'long_name': 'Battery charge over current point','oid': "56.0",'do_metric': False,'unit': 'a', 'divider':1000},	# 0.001 * batt_charge_overcurrent * batt_capacity --> 0.001*500*100Ah=50A
     {'id': 'batt_llvd_voltage', 'long_name': 'LLVD voltage of battery','oid': "57.0",'do_metric': False,'unit': 'v', 'divider':1000},		# the voltage which to cut off unimportant load
@@ -351,39 +369,21 @@ BATT_OIDs = [
 ]
 
 
-BATT_FUSE_ALARM = {
-	'0': { 'name': 'OK', 	'status': State.OK, },
-	'1': { 'name': 'BROKEN', 'status': State.CRIT, },
-}
 
-#def _X(OIDs):
-#    return {OIDs[n]['id']: OIDs[n] for n in OIDs.keys()}
 
 def parse_jetpower_cas02_batt(string_table):
-    
-#    value_list = []
     parameters = string_table[0]
-
     for n in range(len(parameters)):
-
         divider =  BATT_OIDs[n].get('divider') if BATT_OIDs[n].get('divider') else 1
-
         if _isInt(parameters[n]) and divider == 1:
             value = int(parameters[n])
-
         elif _isFloat(parameters[n]):
             value = float(int(parameters[n]) / divider) 
-
         else:
             value = str(parameters[n])
             if (value is None) or (value == ''):
                 value = chr(216)
-
         parameters[n] = value
-#        value_list.update(
-#                {str(BATT_OIDs[n]['id']): {
-#                    'value': value, 
-#                }})
     return parameters
 
 
@@ -392,10 +392,6 @@ def discover_jetpower_cas02_batt(section):
 
 
 def check_jetpower_cas02_batt(item, params, section):
-
-#    pprint(f'Item: {item}')
-#    pprint(section)
-
     if not section:
         yield Result(state=State.UNKNOWN, summary="No data")
         return
@@ -407,24 +403,9 @@ def check_jetpower_cas02_batt(item, params, section):
 
     if item == "JetPower Batteries":
 
-        
-
-#        batt_params = params.get(item) if params.get(item) else batt_default_params        
-
-#        yield Result(state=state, summary="ABC")
-
-#        param_def_list = dict(_X(BATT_OIDs))
-
         for n in range(len(section)):
             param = BATT_OIDs[n].get('id')
             value = section[n]
-
-#            pprint(param_def_list)
-
-#            p = param_def_list[key]
-
-#            pprint(type(p))
-#            pprint(p)
 
             name = BATT_OIDs[n].get('name') if BATT_OIDs[n].get('name') else None
             long_name = BATT_OIDs[n].get('long_name')
@@ -435,23 +416,20 @@ def check_jetpower_cas02_batt(item, params, section):
             if BATT_OIDs[n].get('alarm'):
                 value_name = BATT_OIDs[n].get('alarm').get(str(value)).get('name')
                 status = BATT_OIDs[n].get('alarm').get(str(value)).get('status')
-                details = f"{long_name}: {value_name}"
-                summary = f"{name}: {value_name}"
+                details = f"{long_name}: {value_name}{unit}"
+                summary = f"{name}: {value_name}{unit}"
             else:
-                details = f"{long_name}: {value}"
-                summary = f"{name}: {value}"
+                details = f"{long_name}: {value}{unit}"
+                summary = f"{name}: {value}{unit}"
 
             if do_metric and result and not BATT_OIDs[n].get('alarm'):
-#                pprint(param)
-#                pprint(name)
-#                pprint(value)
                 yield from check_levels(
                             value=value, 
                             metric_name = param,
                             label = name,
 #                            levels_upper = upper_levels, 
 #                            levels_lower = lower_levels, 
-#                            render_func = lambda parameter_data: _render_func(value, unit),
+                            render_func = lambda parameter_data: _render_func(value, unit),
                         )
             elif do_metric and result:
                 yield Metric(param, value)
