@@ -14,20 +14,7 @@ from typing import Dict, List
 from cmk.utils import debug
 from pprint import pprint
 
-#####################################################
-#####################################################
-##                                                 ##
-##      ___      _  ______                         ##
-##     |_  |    | | | ___ \       CAS-02           ##
-##       | | ___| |_| |_/ /____      _____ _ __    ##
-##       | |/ _ \ __|  __/ _ \ \ /\ / / _ \ '__|   ##
-##   /\__/ /  __/ |_| | | (_) \ V  V /  __/ |      ##
-##   \____/ \___|\__\_|  \___/ \_/\_/ \___|_|      ##
-##                                                 ##
-##   Status                                        ##
-##                                                 ##
-#####################################################
-#####################################################
+###############################
 
 UNIT = {
     "c": u"°C",
@@ -45,12 +32,43 @@ UNIT = {
 
 def _render_template(value: float):
     template = "%%%s" % ("d" if isinstance(value, int) else ".1f")
-    return template % value    
+    return template % value
 
 
 def _render_func(value: float, unit: str) -> str:
     return _render_template(value) + UNIT.get(unit) if UNIT.get(unit) else ''
 
+
+def _isFloat(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+
+
+def _isInt(s):
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False
+
+
+#####################################################
+#####################################################
+##                                                 ##
+##      ___      _  ______                         ##
+##     |_  |    | | | ___ \       CAS-02           ##
+##       | | ___| |_| |_/ /____      _____ _ __    ##
+##       | |/ _ \ __|  __/ _ \ \ /\ / / _ \ '__|   ##
+##   /\__/ /  __/ |_| | | (_) \ V  V /  __/ |      ##
+##   \____/ \___|\__\_|  \___/ \_/\_/ \___|_|      ##
+##                                                 ##
+##   Status                                        ##
+##                                                 ##
+#####################################################
+#####################################################
 
 
 SYSTEM_STATUS_NAME = {
@@ -64,7 +82,7 @@ alarm_name = {
 	"1": "Alarm",
 }
 
-NAME="jetpower"
+NAME="jetpower_cas02"
 SNMP_BASE = ".1.3.6.1.4.1.38747.1"
 SNMP_DETECT = startswith('.1.3.6.1.2.1.1.2.0', '.1.3.6.1.4.1.38747') and startswith('.1.3.6.1.2.1.1.5.0', 'CAS-02')
 
@@ -78,50 +96,6 @@ OIDs = {
 '6': {'id': 'system_ac', 'oid': '8.0', 'name': 'AC voltage', 'do_metric': True, 'unit': 'v',  'divider': 1000,  },
 }
 
-#            ["14.0",], # Rectifiers numbers (sum)
-#            ["15.0",], # Rectifiers communication agent status: 1 - normal, 2 - interupt
-#            ["16.0",], # Rectifiers Output Voltage
-#            ["17.0",], # Rectifiers Output Current
-#            ["18.0",], # Rectifiers Output Current limit
-#            ["19.0",], # Rectifiers Input Voltage
-#            ["20.0",], # Rectifiers Status: 0 - shutdown, 1 - power on
-#            ["21.0",], # Rectifiers PugIn OK: 0 - normal, 1 - alarm
-#            ["22.0",], # HVSD - Over Voltage: 0 - normal, 1 - alarm
-#            ["23.0",], # Rectifiers Output status: 0 - normal, 1 -alarm
-#            ["24.0",], # Rectifiers Input Over Voltage: 0 - normal, 1 - alarm
-#            ["25.0",], # Rectifiers Input Under Voltage: 0 - normal, 1 - alarm
-#            ["26.0",], # FAN status: 0 - normal, 1 - alarm
-#            ["31.0",], # Status of communications between rectifiers: 0 - normal, 1 - unsuccessful
-#            ["32.0",], # DCDC eeprom status: 0 - normal, 1 - fault
-#            ["33.0",], # the output power is whtaher derated by the ac voltage or not: 0 - normal, 1 - alarm
-#            ["34.0",], # the output power is whther derated by the temperature or not: 0 - normal, 1 - alarm
-#            ["35.0",], # the status of the rectifier current shared with other rectifier whether ok or not: 0 - normal, 1 - alarm
-#            ["36.0",], # PFC eeprom status: 0 - normal, 1 - fault
-#            ["37.0",], # the status of the communication between the recitifiers and the monitor: 0 - normal, 1 - alarm
-#            ["38.0",], # whether the AC voltage is normal or not: 0 - normal, 1 - out of the range
-#            ["39.0",], # whether the output of the rectifier is normal or not: 0 - normal, 1 - alarm
-#            ["43.0",], # the number of the load in the system
-#            ["44.0",], # the fuse of the load loop: 0 - well, 1 - broken
-#            ["46.0",], # The digital input status of the DI port,0x01 indicates DI0 and 0x02 indicates DI1, and so on
-#            ["47.0",], # The sum of active alarms
-            # ["59.0",], # LLVD the voltage which the power system unload  get in V
-            # ["62.0",], # the period of the next EQ charge time
-            # ["66.0",], # the total time of the stable current in EQ charge mode. get in (A).
-
-
-def _isFloat(s):
-    try:
-        float(s)
-        return True
-    except ValueError:
-        return False
-
-def _isInt(s):
-    try:
-        int(s)
-        return True
-    except ValueError:
-        return False
 
 def parse_jetpower_cas02(string_table):
     param_list = {}
@@ -135,7 +109,7 @@ def parse_jetpower_cas02(string_table):
             value = int(parameters[n])
 
         elif _isFloat(parameters[n]):
-            value = float(int(parameters[n]) / divider) 
+            value = float(int(parameters[n]) / divider)
 
         else:
             value = str(parameters[n])
@@ -144,8 +118,8 @@ def parse_jetpower_cas02(string_table):
 
         param_list.update(
 		{str(OIDs[str(n)]['id']): {
-		    'value': value, 
-		    'name': name, 
+		    'value': value,
+		    'name': name,
 		    'do_metric': do_metric,
 		}})
     return param_list
@@ -185,7 +159,7 @@ def check_jetpower_cas02(item, params, section):
         if system_status == 1:
             state=State.OK
         elif system_status == 2:
-            state=State.WARRNING
+            state=State.WARN
         elif system_status == 3:
             state=State.CRIT
         else:
@@ -198,8 +172,6 @@ def check_jetpower_cas02(item, params, section):
         return
     yield Result(state=State.UNKNOWN, summary="No item or data")
     return
-
-
 
 
 register.snmp_section(
@@ -270,7 +242,7 @@ def check_jetpower_cas02_temp(item, params, section):
 
         if state == State.OK:
             summary = f'Temperature is OK.'
-            yield Result(state=state, summary=summary)    
+            yield Result(state=state, summary=summary)
         return
 
     else:
@@ -301,7 +273,6 @@ register.check_plugin(
 )
 
 
-
 #####################################################
 #####################################################
 ##                                                 ##
@@ -317,12 +288,12 @@ register.check_plugin(
 #####################################################
 #####################################################
 
-BATT_STATUS = { 
-	'1': { 'name': 'in float charge',	'status': State.OK, }, 
+BATT_STATUS = {
+	'1': { 'name': 'in float charge',	'status': State.OK, },
 	'2': { 'name': 'in equal charge',	'status': State.OK, },
 }
 
-BATT_CURRENT_ALARM = { 
+BATT_CURRENT_ALARM = {
 	'0': { 'name': 'normal',	'status': State.OK, },
 	'1': { 'name': 'too HIGH',	'status': State.WARN, },
 }
@@ -369,8 +340,6 @@ BATT_OIDs = [
 ]
 
 
-
-
 def parse_jetpower_cas02_batt(string_table):
     parameters = string_table[0]
     for n in range(len(parameters)):
@@ -378,7 +347,7 @@ def parse_jetpower_cas02_batt(string_table):
         if _isInt(parameters[n]) and divider == 1:
             value = int(parameters[n])
         elif _isFloat(parameters[n]):
-            value = float(int(parameters[n]) / divider) 
+            value = float(int(parameters[n]) / divider)
         else:
             value = str(parameters[n])
             if (value is None) or (value == ''):
@@ -424,11 +393,11 @@ def check_jetpower_cas02_batt(item, params, section):
 
             if do_metric and result and not BATT_OIDs[n].get('alarm'):
                 yield from check_levels(
-                            value=value, 
+                            value=value,
                             metric_name = param,
                             label = name,
-#                            levels_upper = upper_levels, 
-#                            levels_lower = lower_levels, 
+#                            levels_upper = upper_levels,
+#                            levels_lower = lower_levels,
                             render_func = lambda parameter_data: _render_func(value, unit),
                         )
             elif do_metric and result:
@@ -443,8 +412,6 @@ def check_jetpower_cas02_batt(item, params, section):
     return
 
 
-
-
 register.snmp_section(
     name=NAME + "_batt",
     fetch = SNMPTree(
@@ -453,8 +420,9 @@ register.snmp_section(
     ),
     detect = SNMP_DETECT,
     parse_function = parse_jetpower_cas02_batt,
-
 )
+
+
 register.check_plugin(
     name = NAME + "_batt",
     sections=[NAME+"_batt"],
@@ -464,3 +432,4 @@ register.check_plugin(
     check_ruleset_name='',
     check_function = check_jetpower_cas02_batt,
 )
+
